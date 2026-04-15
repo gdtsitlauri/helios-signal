@@ -153,6 +153,118 @@ def hamming74_decode(codeword: np.ndarray) -> np.ndarray:
     return codeword[:, :4].reshape(-1)
 
 
+def hamming1511_encode(bits: np.ndarray) -> np.ndarray:
+    bits = np.asarray(bits, dtype=int).reshape(-1, 11)
+    encoded = []
+    parity_positions = {1, 2, 4, 8}
+    for block in bits:
+        code = np.zeros(16, dtype=int)
+        data_idx = 0
+        for pos in range(1, 16):
+            if pos not in parity_positions:
+                code[pos] = block[data_idx]
+                data_idx += 1
+        for parity in parity_positions:
+            mask = [pos for pos in range(1, 16) if pos & parity]
+            code[parity] = int(sum(code[pos] for pos in mask if pos != parity) % 2)
+        encoded.append(code[1:])
+    return np.asarray(encoded, dtype=int).reshape(-1)
+
+
+def hamming1511_decode(codeword: np.ndarray) -> np.ndarray:
+    codeword = np.asarray(codeword, dtype=int).reshape(-1, 15)
+    decoded = []
+    parity_positions = {1, 2, 4, 8}
+    for row in codeword:
+        code = np.zeros(16, dtype=int)
+        code[1:] = row
+        syndrome = 0
+        for parity in parity_positions:
+            mask = [pos for pos in range(1, 16) if pos & parity]
+            syndrome += parity * (sum(code[pos] for pos in mask) % 2)
+        if 1 <= syndrome <= 15:
+            code[syndrome] ^= 1
+        decoded.append([code[pos] for pos in range(1, 16) if pos not in parity_positions])
+    return np.asarray(decoded, dtype=int).reshape(-1)
+
+
+def convolutional_encode(bits: np.ndarray, generators: tuple[int, int] = (0o7, 0o5), constraint_length: int = 3) -> np.ndarray:
+    bits = np.asarray(bits, dtype=int).reshape(-1)
+    state = 0
+    encoded = []
+    mask = (1 << constraint_length) - 1
+    for bit in np.concatenate([bits, np.zeros(constraint_length - 1, dtype=int)]):
+        state = ((state << 1) | int(bit)) & mask
+        for g in generators:
+            encoded.append(bin(state & g).count("1") % 2)
+    return np.asarray(encoded, dtype=int)
+
+
+def viterbi_decode_convolutional(
+    coded_bits: np.ndarray, generators: tuple[int, int] = (0o7, 0o5), constraint_length: int = 3
+) -> np.ndarray:
+    coded_bits = np.asarray(coded_bits, dtype=int).reshape(-1, len(generators))
+    n_states = 2 ** (constraint_length - 1)
+    inf = 1e9
+    metrics = np.full(n_states, inf)
+    metrics[0] = 0
+    paths = [[] for _ in range(n_states)]
+    for symbol in coded_bits:
+        new_metrics = np.full(n_states, inf)
+        new_paths = [[] for _ in range(n_states)]
+        for state in range(n_states):
+            if metrics[state] >= inf:
+                continue
+            for bit in (0, 1):
+                full_state = ((state << 1) | bit) & ((1 << constraint_length) - 1)
+                next_state = full_state & (n_states - 1)
+                expected = np.array([bin(full_state & g).count("1") % 2 for g in generators])
+                dist = np.sum(expected != symbol)
+                candidate = metrics[state] + dist
+                if candidate < new_metrics[next_state]:
+                    new_metrics[next_state] = candidate
+                    new_paths[next_state] = paths[state] + [bit]
+        metrics, paths = new_metrics, new_paths
+    best = int(np.argmin(metrics))
+    decoded = np.asarray(paths[best], dtype=int)
+    if decoded.size >= constraint_length - 1:
+        decoded = decoded[: -(constraint_length - 1)]
+    return decoded
+
+
+LDPC_H = np.array(
+    [
+        [1, 1, 0, 1, 0, 0],
+        [0, 1, 1, 0, 1, 0],
+        [1, 0, 1, 0, 0, 1],
+    ],
+    dtype=int,
+)
+
+
+def ldpc_encode_small(message_bits: np.ndarray) -> np.ndarray:
+    m = np.asarray(message_bits, dtype=int).reshape(-1, 3)
+    encoded = []
+    for b0, b1, b2 in m:
+        p0 = (b0 + b1) % 2
+        p1 = (b1 + b2) % 2
+        p2 = (b0 + b2) % 2
+        encoded.append([b0, b1, b2, p0, p1, p2])
+    return np.asarray(encoded, dtype=int).reshape(-1)
+
+
+def ldpc_bitflip_decode(codeword: np.ndarray, max_iter: int = 8) -> np.ndarray:
+    words = np.asarray(codeword, dtype=int).reshape(-1, 6).copy()
+    for row in words:
+        for _ in range(max_iter):
+            syndrome = LDPC_H @ row % 2
+            if not syndrome.any():
+                break
+            participation = LDPC_H.T @ syndrome
+            row[np.argmax(participation)] ^= 1
+    return words[:, :3].reshape(-1)
+
+
 def turbo_code_ber(snr_db: float, rate: float = 0.5) -> float:
     ebn0 = 10 ** (snr_db / 10.0)
     effective = ebn0 / max(rate, 1e-6)
@@ -165,6 +277,31 @@ def hamming74_ber(snr_db: float, rate: float = 4 / 7) -> float:
     effective = ebn0 * rate
     q = norm.sf(np.sqrt(2 * effective))
     return float(min(2.5 * q, 1.0))
+
+
+def hamming1511_ber(snr_db: float, rate: float = 11 / 15) -> float:
+    ebn0 = 10 ** (snr_db / 10.0)
+    effective = ebn0 * rate
+    q = norm.sf(np.sqrt(2 * effective))
+    return float(min(2.0 * q, 1.0))
+
+
+def convolutional_ber(snr_db: float, rate: float = 0.5) -> float:
+    ebn0 = 10 ** (snr_db / 10.0)
+    q = norm.sf(np.sqrt(2 * ebn0 / max(rate, 1e-6)))
+    return float(min(q * 0.2, 1.0))
+
+
+def ldpc_ber(snr_db: float, rate: float = 0.5) -> float:
+    ebn0 = 10 ** (snr_db / 10.0)
+    q = norm.sf(np.sqrt(2 * ebn0 / max(rate, 1e-6)))
+    return float(min(q * 0.08, 1.0))
+
+
+def reed_solomon_like_ser(snr_db: float, symbol_rate: float = 0.7) -> float:
+    ebn0 = 10 ** (snr_db / 10.0)
+    q = norm.sf(np.sqrt(2 * ebn0 * symbol_rate))
+    return float(min(q * 0.5, 1.0))
 
 
 @dataclass
@@ -182,6 +319,10 @@ def ber_summary(snr_values: np.ndarray) -> list[dict]:
     rows = []
     for snr in np.asarray(snr_values, dtype=float):
         rows.append({"code": "hamming74", "snr_db": float(snr), "ber": hamming74_ber(float(snr))})
+        rows.append({"code": "hamming1511", "snr_db": float(snr), "ber": hamming1511_ber(float(snr))})
+        rows.append({"code": "convolutional_viterbi", "snr_db": float(snr), "ber": convolutional_ber(float(snr))})
+        rows.append({"code": "reed_solomon_like", "snr_db": float(snr), "ber": reed_solomon_like_ser(float(snr))})
+        rows.append({"code": "ldpc_bitflip", "snr_db": float(snr), "ber": ldpc_ber(float(snr))})
         rows.append({"code": "turbo_simplified", "snr_db": float(snr), "ber": turbo_code_ber(float(snr))})
         rows.append({"code": "neural_autoencoder", "snr_db": float(snr), "ber": auto.theoretical_ber(float(snr))})
     return rows

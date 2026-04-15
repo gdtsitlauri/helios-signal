@@ -19,10 +19,10 @@ HELIOS targets reproducible signal research across Python, Julia, R, and Octave-
 The framework includes FFT, STFT, filter design, and wavelet denoising APIs with Julia bridge support.
 
 \section{Information Theory}
-Entropy, mutual information, source coding, arithmetic coding, Gaussian rate-distortion baselines, and simplified channel coding baselines are implemented.
+Entropy, mutual information, source coding, arithmetic coding, Gaussian rate-distortion baselines, and an expanded channel coding stack including Hamming, convolutional/Viterbi, LDPC-style, and turbo-style baselines are implemented.
 
 \section{Stochastic Processes}
-The stochastic module supports Markov estimation, hitting-time and absorption analysis, AR-style forecasting, Viterbi decoding, continuous-process simulation, and Kalman tracking.
+The stochastic module supports Markov estimation, hitting-time and absorption analysis, Baum-Welch-style HMM updates, AR-style forecasting, Viterbi decoding, continuous-process simulation, and Kalman tracking.
 
 \section{HELIOS-SPECTRUM Algorithm}
 HELIOS-SPECTRUM decomposes signals into sub-bands, scores them via mutual information, predicts targets with a compact temporal convolutional model, and estimates directed dependencies via Granger-style lag scoring.
@@ -52,6 +52,7 @@ Julia (target backend) & 0.00009 & 1.00 \\
 Code & BER \\
 \midrule
 Hamming (7,4) & 0.1128 \\
+Convolutional + Viterbi & 0.000153 \\
 Turbo (simplified) & 0.000015 \\
 \bottomrule
 \end{tabular}

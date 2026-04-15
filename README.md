@@ -45,10 +45,10 @@ Bridge discovery order:
 ## Implemented Research Blocks
 
 - DSP: FFT, STFT, filter design and response, group delay, wavelet decomposition/reconstruction, denoising, Julia bridge
-- Information theory: entropy, mutual information, Huffman/LZ78/arithmetic coding, Hamming and turbo-style BER baselines, Gaussian rate-distortion
-- Stochastic systems: Markov transition estimation, stationary distributions, hitting times, absorption probabilities, AR1/AR2 forecasting, Viterbi decoding, Poisson/Brownian/GBM/OU simulation, Kalman tracking, R bridge
+- Information theory: entropy, mutual information, Huffman/LZ78/arithmetic coding, Hamming `(7,4)` and `(15,11)`, convolutional/Viterbi, LDPC-style bit-flip decoding, Reed-Solomon-like BER proxy, turbo-style BER baselines, Gaussian rate-distortion
+- Stochastic systems: Markov transition estimation, stationary distributions, hitting times, absorption probabilities, Baum-Welch-style update step, ARIMA/SARIMA-style R forecasting, AR1/AR2 forecasting, Viterbi decoding, Poisson/Brownian/GBM/OU simulation, Kalman tracking, R bridge
 - HELIOS-SPECTRUM: wavelet feature extraction, MI-driven selection, temporal prediction, uncertainty estimation, causal graph export
-- Octave-compatible control: Bode export, CSV outputs, PNG plot generation, Octave bridge
+- Octave-compatible control: Bode and Nyquist data export, generated signal CSVs, PNG plot generation, Octave bridge
 
 ## Current Environment Notes
 

@@ -16,10 +16,16 @@ from helios.dsp.dsp_bridge import fft_via_bridge
 from helios.helios_spectrum import run_helios_spectrum
 from helios.information_theory import (
     arithmetic_encode,
+    convolutional_encode,
+    hamming1511_decode,
+    hamming1511_encode,
     huffman_compress,
+    ldpc_bitflip_decode,
+    ldpc_encode_small,
     lz78_compress,
     rate_distortion_gaussian,
     turbo_code_ber,
+    viterbi_decode_convolutional,
 )
 from helios.octave import run_bode_bridge
 from helios.stochastic import (
@@ -80,6 +86,27 @@ def test_compression_and_rate_distortion_extensions():
     assert arithmetic["compression_ratio"] > 1.0
     assert lz["compression_ratio"] > 0.8
     assert np.all(np.diff(rd) <= 1e-9)
+
+
+def test_extended_channel_codes():
+    bits11 = np.array([1, 0, 1, 1, 0, 1, 0, 0, 1, 1, 0])
+    enc1511 = hamming1511_encode(bits11)
+    noisy1511 = enc1511.copy()
+    noisy1511[3] ^= 1
+    dec1511 = hamming1511_decode(noisy1511)
+    assert np.array_equal(dec1511[:11], bits11)
+
+    bits = np.array([1, 0, 1, 1, 0, 0])
+    conv = convolutional_encode(bits)
+    dec = viterbi_decode_convolutional(conv)
+    assert np.array_equal(dec[: len(bits)], bits)
+
+    ldpc_msg = np.array([1, 0, 1])
+    ldpc_code = ldpc_encode_small(ldpc_msg)
+    ldpc_noisy = ldpc_code.copy()
+    ldpc_noisy[3] ^= 1
+    ldpc_dec = ldpc_bitflip_decode(ldpc_noisy)
+    assert np.array_equal(ldpc_dec[:3], ldpc_msg)
 
 
 def test_turbo_code_ber():
@@ -152,6 +179,7 @@ def test_octave_bridge():
     result = run_bode_bridge()
     assert result["backend"] in {"octave", "python-fallback"}
     assert len(result["omega"]) == len(result["mag"]) == len(result["phase"])
+    assert "nyquist_available" in result
 
 
 def test_packaged_results_exist():

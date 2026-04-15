@@ -1,6 +1,6 @@
-process,summary
-poisson,9
-brownian,7.95739648635367
-gbm,1.1224253864478044
-ornstein_uhlenbeck,-0.033783151567436165
-viterbi_path,001110
+"process","value"
+"poisson_count",11
+"brownian_last",0.994088041422896
+"gbm_last",1.01543196741295
+"ou_last",0.0752552633519291
+"euler_maruyama_last",-0.156235586844942
