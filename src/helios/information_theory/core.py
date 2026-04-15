@@ -65,6 +65,26 @@ def huffman_compress(text: str) -> dict:
     return {"encoded": encoded, "codebook": codebook, "compression_ratio": ratio}
 
 
+def arithmetic_encode(text: str) -> dict:
+    counts = Counter(text)
+    total = sum(counts.values())
+    cumulative = {}
+    running = 0.0
+    for symbol in sorted(counts):
+        prob = counts[symbol] / total
+        cumulative[symbol] = (running, running + prob)
+        running += prob
+    low, high = 0.0, 1.0
+    for ch in text:
+        width = high - low
+        lo, hi = cumulative[ch]
+        high = low + width * hi
+        low = low + width * lo
+    bits = max(1, math.ceil(-math.log2(high - low + 1e-15)))
+    ratio = (len(text) * 8) / bits
+    return {"interval": (low, high), "bits": bits, "compression_ratio": ratio}
+
+
 def lz78_compress(text: str) -> dict:
     dictionary = {"": 0}
     tokens: list[tuple[int, str]] = []
@@ -82,6 +102,12 @@ def lz78_compress(text: str) -> dict:
     encoded_symbols = len(tokens) * (math.ceil(math.log2(max(len(dictionary), 2))) + 8)
     ratio = (len(text) * 8) / max(encoded_symbols, 1)
     return {"tokens": tokens, "compression_ratio": ratio}
+
+
+def rate_distortion_gaussian(variance: float, distortions: np.ndarray) -> np.ndarray:
+    distortions = np.asarray(distortions, dtype=float)
+    variance = float(max(variance, 1e-12))
+    return 0.5 * np.log2(np.maximum(variance / np.maximum(distortions, 1e-12), 1.0))
 
 
 GENERATOR = np.array(
@@ -149,3 +175,13 @@ class NeuralChannelAutoencoder:
 
     def theoretical_ber(self, snr_db: float) -> float:
         return float(turbo_code_ber(snr_db, rate=self.input_bits / self.code_bits) * 0.85)
+
+
+def ber_summary(snr_values: np.ndarray) -> list[dict]:
+    auto = NeuralChannelAutoencoder()
+    rows = []
+    for snr in np.asarray(snr_values, dtype=float):
+        rows.append({"code": "hamming74", "snr_db": float(snr), "ber": hamming74_ber(float(snr))})
+        rows.append({"code": "turbo_simplified", "snr_db": float(snr), "ber": turbo_code_ber(float(snr))})
+        rows.append({"code": "neural_autoencoder", "snr_db": float(snr), "ber": auto.theoretical_ber(float(snr))})
+    return rows

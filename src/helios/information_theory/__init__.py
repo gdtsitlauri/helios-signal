@@ -1,4 +1,6 @@
 from .core import (
+    arithmetic_encode,
+    ber_summary,
     channel_capacity_bsc,
     conditional_entropy,
     entropy,
@@ -11,6 +13,7 @@ from .core import (
     lz78_compress,
     mutual_information,
     NeuralChannelAutoencoder,
+    rate_distortion_gaussian,
     turbo_code_ber,
 )
 
@@ -19,7 +22,9 @@ __all__ = [
     "joint_entropy",
     "conditional_entropy",
     "mutual_information",
+    "arithmetic_encode",
     "channel_capacity_bsc",
+    "rate_distortion_gaussian",
     "huffman_codebook",
     "huffman_compress",
     "lz78_compress",
@@ -28,4 +33,5 @@ __all__ = [
     "hamming74_ber",
     "turbo_code_ber",
     "NeuralChannelAutoencoder",
+    "ber_summary",
 ]

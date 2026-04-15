@@ -8,6 +8,7 @@ This bootstrap implementation provides:
 - Julia, R, and Octave bridge layers with graceful fallbacks
 - A lightweight HELIOS-SPECTRUM pipeline for end-to-end signal analysis
 - Baseline result artifacts, tests, and an IEEE-style paper draft
+- Extended research utilities for arithmetic coding, Gaussian rate-distortion, Markov hitting/absorption metrics, and continuous-time process simulation
 
 ## Layout
 
@@ -26,7 +27,7 @@ python3 -m pytest tests/test_helios.py
 python3 scripts/run_experiments.py
 ```
 
-The Python package uses fallbacks when `julia`, `R`, or `octave` are unavailable, which is the current state of this workspace.
+The Python package uses fallbacks automatically when `julia`, `R`, or `octave` are unavailable.
 
 Bridge discovery order:
 
@@ -41,10 +42,20 @@ Bridge discovery order:
 - R scripts target time-series and stochastic analysis
 - Octave scripts target control systems and MATLAB-compatible workflows
 
+## Implemented Research Blocks
+
+- DSP: FFT, STFT, filter design and response, group delay, wavelet decomposition/reconstruction, denoising, Julia bridge
+- Information theory: entropy, mutual information, Huffman/LZ78/arithmetic coding, Hamming and turbo-style BER baselines, Gaussian rate-distortion
+- Stochastic systems: Markov transition estimation, stationary distributions, hitting times, absorption probabilities, AR1/AR2 forecasting, Viterbi decoding, Poisson/Brownian/GBM/OU simulation, Kalman tracking, R bridge
+- HELIOS-SPECTRUM: wavelet feature extraction, MI-driven selection, temporal prediction, uncertainty estimation, causal graph export
+- Octave-compatible control: Bode export, CSV outputs, PNG plot generation, Octave bridge
+
 ## Current Environment Notes
 
 - Python is available
 - PyTorch with CUDA support is installed
-- Julia, R, and Octave are not currently installed in this workspace
+- Julia is installed locally in `.tooling/julia`
+- R is installed locally in `.tooling/r-env`
+- Octave is installed locally in `.tooling/octave-env`
 
 The bridges are implemented so the architecture is stable now and can switch to the external runtimes once those tools are installed.

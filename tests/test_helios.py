@@ -14,13 +14,26 @@ from helios.dsp import (
 )
 from helios.dsp.dsp_bridge import fft_via_bridge
 from helios.helios_spectrum import run_helios_spectrum
-from helios.information_theory import huffman_compress, turbo_code_ber
+from helios.information_theory import (
+    arithmetic_encode,
+    huffman_compress,
+    lz78_compress,
+    rate_distortion_gaussian,
+    turbo_code_ber,
+)
 from helios.octave import run_bode_bridge
 from helios.stochastic import (
+    absorption_probabilities,
     estimate_transition_matrix,
+    forecast_ar2,
+    hitting_times,
     run_arima_bridge,
     run_tracking_demo,
+    simulate_gbm,
+    simulate_ornstein_uhlenbeck,
+    simulate_poisson_process,
     stationary_distribution,
+    viterbi_decode,
 )
 
 
@@ -59,6 +72,16 @@ def test_huffman_coding():
     assert compressed["compression_ratio"] > 1.0
 
 
+def test_compression_and_rate_distortion_extensions():
+    text = "signal signal signal processing"
+    arithmetic = arithmetic_encode(text)
+    lz = lz78_compress(text)
+    rd = rate_distortion_gaussian(variance=1.0, distortions=np.array([0.1, 0.2, 0.5]))
+    assert arithmetic["compression_ratio"] > 1.0
+    assert lz["compression_ratio"] > 0.8
+    assert np.all(np.diff(rd) <= 1e-9)
+
+
 def test_turbo_code_ber():
     assert turbo_code_ber(4.0) < 0.01
 
@@ -68,6 +91,32 @@ def test_markov_stationary():
     transition = estimate_transition_matrix(states, n_states=3)
     stationary = stationary_distribution(transition)
     assert np.isclose(stationary.sum(), 1.0)
+
+
+def test_stochastic_extensions():
+    transition = np.array([[0.5, 0.5, 0.0], [0.2, 0.5, 0.3], [0.0, 0.0, 1.0]])
+    hits = hitting_times(transition, target_state=2)
+    absorb = absorption_probabilities(transition, absorbing_states=[2])
+    assert hits[2] == 0.0
+    assert np.allclose(absorb[2], np.array([1.0]))
+
+    series = np.array([1.0, 0.9, 0.82, 0.77, 0.70, 0.65])
+    ar2 = forecast_ar2(series, horizon=3)
+    assert len(ar2) == 3
+
+    pois = simulate_poisson_process(rate=2.0, horizon=3.0, seed=0)
+    gbm = simulate_gbm(steps=32, seed=0)
+    ou = simulate_ornstein_uhlenbeck(steps=32, seed=0)
+    assert np.all(np.diff(pois) >= 0)
+    assert gbm.shape == (33,)
+    assert ou.shape == (33,)
+
+    decoded = viterbi_decode(
+        np.array([0, 0, 1, 1, 1, 0]),
+        transition=np.array([[0.85, 0.15], [0.2, 0.8]]),
+        emission=np.array([[0.9, 0.1], [0.2, 0.8]]),
+    )
+    assert decoded.shape == (6,)
 
 
 def test_kalman_convergence():
@@ -110,3 +159,5 @@ def test_packaged_results_exist():
     assert (root / "results" / "helios_spectrum" / "comparison_table.csv").exists()
     graph = json.loads((root / "results" / "helios_spectrum" / "causal_graph.json").read_text())
     assert graph
+    assert (root / "results" / "information_theory" / "rate_distortion.csv").exists()
+    assert (root / "results" / "stochastic" / "continuous_processes.csv").exists()

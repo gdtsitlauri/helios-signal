@@ -12,20 +12,30 @@ from helios.dsp import design_filter, fft, frequency_response, wavelet_denoise
 from helios.helios_spectrum import run_helios_spectrum
 from helios.information_theory import (
     NeuralChannelAutoencoder,
+    arithmetic_encode,
+    ber_summary,
     entropy,
-    hamming74_ber,
     huffman_compress,
     lz78_compress,
     mutual_information,
-    turbo_code_ber,
+    rate_distortion_gaussian,
 )
 from helios.octave import run_bode_bridge
 from helios.stochastic import (
+    absorption_probabilities,
     estimate_transition_matrix,
     fit_ar1,
+    fit_ar2,
     forecast_ar1,
+    forecast_ar2,
+    hitting_times,
     run_tracking_demo,
+    simulate_brownian_motion,
+    simulate_gbm,
+    simulate_ornstein_uhlenbeck,
+    simulate_poisson_process,
     stationary_distribution,
+    viterbi_decode,
 )
 
 
@@ -86,20 +96,25 @@ def run_information_theory_experiments() -> None:
     )
 
     auto = NeuralChannelAutoencoder()
-    rows = []
-    for snr in range(0, 7):
-        rows.append({"code": "hamming74", "snr_db": snr, "ber": hamming74_ber(snr)})
-        rows.append({"code": "turbo_simplified", "snr_db": snr, "ber": turbo_code_ber(snr)})
-        rows.append({"code": "neural_autoencoder", "snr_db": snr, "ber": auto.theoretical_ber(snr)})
-    pd.DataFrame(rows).to_csv(out / "channel_coding_ber.csv", index=False)
+    pd.DataFrame(ber_summary(np.arange(0, 7))).to_csv(out / "channel_coding_ber.csv", index=False)
 
     text = "signal processing and stochastic systems benefit from repetition repetition repetition"
     pd.DataFrame(
         [
             {"algorithm": "huffman", "compression_ratio": huffman_compress(text)["compression_ratio"], "shannon_limit_ratio": 2.0},
             {"algorithm": "lz78", "compression_ratio": lz78_compress(text)["compression_ratio"], "shannon_limit_ratio": 2.0},
+            {"algorithm": "arithmetic", "compression_ratio": arithmetic_encode(text)["compression_ratio"], "shannon_limit_ratio": 2.0},
         ]
     ).to_csv(out / "compression_comparison.csv", index=False)
+
+    distortions = np.linspace(0.05, 1.0, 8)
+    pd.DataFrame(
+        {
+            "distortion": distortions,
+            "rate_distortion_bits": rate_distortion_gaussian(variance=1.0, distortions=distortions),
+            "neural_code_reference_ber": [auto.theoretical_ber(4.0)] * len(distortions),
+        }
+    ).to_csv(out / "rate_distortion.csv", index=False)
 
 
 def run_stochastic_experiments() -> None:
@@ -108,13 +123,50 @@ def run_stochastic_experiments() -> None:
     states = np.array([0, 1, 1, 2, 1, 0, 2, 2, 1, 0, 1, 2])
     trans = estimate_transition_matrix(states, n_states=3)
     stat = stationary_distribution(trans)
-    pd.DataFrame({"state": np.arange(len(stat)), "stationary_probability": stat}).to_csv(out / "markov_analysis.csv", index=False)
+    hits = hitting_times(trans, target_state=2)
+    absorb = absorption_probabilities(
+        np.array(
+            [
+                [0.5, 0.5, 0.0],
+                [0.2, 0.5, 0.3],
+                [0.0, 0.0, 1.0],
+            ]
+        ),
+        absorbing_states=[2],
+    )
+    obs = np.array([0, 0, 1, 1, 1, 0])
+    decoded = viterbi_decode(
+        obs,
+        transition=np.array([[0.85, 0.15], [0.2, 0.8]]),
+        emission=np.array([[0.9, 0.1], [0.2, 0.8]]),
+    )
+    pd.DataFrame(
+        {
+            "state": np.arange(len(stat)),
+            "stationary_probability": stat,
+            "hitting_time_to_state_2": hits,
+            "absorption_probability_to_state_2": absorb[:, 0],
+        }
+    ).to_csv(out / "markov_analysis.csv", index=False)
 
     t = np.linspace(0, 12, 120)
     series = 0.85 ** np.arange(120) + 0.1 * np.sin(t)
     phi, sigma = fit_ar1(series)
+    ar2_coeffs, ar2_sigma = fit_ar2(series)
     forecast = forecast_ar1(series, horizon=8)
-    pd.DataFrame({"horizon": np.arange(1, len(forecast) + 1), "forecast": forecast, "phi": phi, "sigma": sigma}).to_csv(
+    forecast2 = forecast_ar2(series, horizon=8)
+    pd.DataFrame(
+        {
+            "horizon": np.arange(1, len(forecast) + 1),
+            "forecast_ar1": forecast,
+            "forecast_ar2": forecast2,
+            "phi": phi,
+            "sigma": sigma,
+            "ar2_a1": ar2_coeffs[0],
+            "ar2_a2": ar2_coeffs[1],
+            "ar2_sigma": ar2_sigma,
+        }
+    ).to_csv(
         out / "time_series_forecast.csv", index=False
     )
 
@@ -122,6 +174,18 @@ def run_stochastic_experiments() -> None:
     pd.DataFrame([{"metric": "measurement_rmse", "value": tracking["measurement_rmse"]}, {"metric": "estimate_rmse", "value": tracking["estimate_rmse"]}]).to_csv(
         out / "kalman_tracking.csv", index=False
     )
+    pd.DataFrame(
+        {
+            "process": ["poisson", "brownian", "gbm", "ornstein_uhlenbeck", "viterbi_path"],
+            "summary": [
+                int(len(simulate_poisson_process(rate=2.0, horizon=5.0, seed=0))),
+                float(simulate_brownian_motion(steps=128, seed=0)[-1]),
+                float(simulate_gbm(steps=128, seed=0)[-1]),
+                float(simulate_ornstein_uhlenbeck(steps=128, seed=0)[-1]),
+                "".join(map(str, decoded.tolist())),
+            ],
+        }
+    ).to_csv(out / "continuous_processes.csv", index=False)
 
 
 def run_helios_spectrum_experiment() -> None:

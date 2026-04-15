@@ -1,0 +1,6 @@
+process,summary
+poisson,9
+brownian,7.95739648635367
+gbm,1.1224253864478044
+ornstein_uhlenbeck,-0.033783151567436165
+viterbi_path,001110
