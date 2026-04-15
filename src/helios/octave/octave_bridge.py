@@ -24,6 +24,9 @@ def run_bode_bridge(num=(1.0,), den=(1.0, 1.0)) -> dict:
                 bode_path = Path(tmpdir) / "bode.csv"
                 nyquist_path = Path(tmpdir) / "nyquist.csv"
                 step_path = Path(tmpdir) / "step.csv"
+                impulse_path = Path(tmpdir) / "impulse.csv"
+                root_locus_path = Path(tmpdir) / "root_locus.csv"
+                margins_path = Path(tmpdir) / "margins.csv"
                 if bode_path.exists():
                     bode_data = np.loadtxt(bode_path)
                     w = bode_data[:, 0]
@@ -37,7 +40,20 @@ def run_bode_bridge(num=(1.0,), den=(1.0, 1.0)) -> dict:
                     "phase": phase,
                     "nyquist_available": nyquist_path.exists(),
                     "step_available": step_path.exists(),
+                    "impulse_available": impulse_path.exists(),
+                    "root_locus_available": root_locus_path.exists(),
+                    "margins_available": margins_path.exists(),
                 }
         except subprocess.SubprocessError:
             pass
-    return {"backend": "python-fallback", "omega": w, "mag": mag, "phase": phase, "nyquist_available": False, "step_available": False}
+    return {
+        "backend": "python-fallback",
+        "omega": w,
+        "mag": mag,
+        "phase": phase,
+        "nyquist_available": False,
+        "step_available": False,
+        "impulse_available": False,
+        "root_locus_available": False,
+        "margins_available": False,
+    }

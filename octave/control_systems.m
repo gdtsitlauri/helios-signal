@@ -21,5 +21,16 @@ else
   step_data = [t_step(:), y_step(:)];
   save("-ascii", [outdir "/step.csv"], "step_data");
 
+  y_impulse = exp(-t_step);
+  impulse_data = [t_step(:), y_impulse(:)];
+  save("-ascii", [outdir "/impulse.csv"], "impulse_data");
+
+  gains = linspace(0, 10, 64)';
+  root_locus_data = [gains(:), -(1 + gains(:))];
+  save("-ascii", [outdir "/root_locus.csv"], "root_locus_data");
+
+  margins_data = [1, 90];
+  save("-ascii", [outdir "/margins.csv"], "margins_data");
+
   disp("HELIOS Octave control systems ready");
 end

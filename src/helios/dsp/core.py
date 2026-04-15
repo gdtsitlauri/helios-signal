@@ -37,6 +37,14 @@ def fft(x: Iterable[float], fs: float = 1.0, zero_pad: int = 0, window: str | No
     return {"freqs": freqs, "spectrum": spectrum, "magnitude": np.abs(spectrum)}
 
 
+def dft(x: Iterable[float]) -> np.ndarray:
+    samples = _as_array(x)
+    n = len(samples)
+    k = np.arange(n)
+    twiddle = np.exp(-2j * np.pi * np.outer(k, k) / n)
+    return twiddle @ samples
+
+
 def ifft(spectrum: Iterable[complex]) -> np.ndarray:
     return np.fft.irfft(np.asarray(spectrum))
 
@@ -44,6 +52,11 @@ def ifft(spectrum: Iterable[complex]) -> np.ndarray:
 def stft(x: Iterable[float], fs: float = 1.0, nperseg: int = 64, noverlap: int = 32, window: str = "hann") -> dict:
     f, t, z = signal.stft(_as_array(x), fs=fs, nperseg=nperseg, noverlap=noverlap, window=window)
     return {"freqs": f, "times": t, "spectrogram": np.abs(z)}
+
+
+def spectrogram(x: Iterable[float], fs: float = 1.0, nperseg: int = 64, noverlap: int = 32, window: str = "hann") -> dict:
+    f, t, s = signal.spectrogram(_as_array(x), fs=fs, nperseg=nperseg, noverlap=noverlap, window=window)
+    return {"freqs": f, "times": t, "power": s}
 
 
 def design_filter(
@@ -98,6 +111,21 @@ def wavelet_decompose(x: Iterable[float], levels: int = 3) -> list[np.ndarray]:
         current = approx
     coeffs.append(current)
     return coeffs
+
+
+def wavelet_packet_decompose(x: Iterable[float], levels: int = 3) -> dict[str, np.ndarray]:
+    packets: dict[str, np.ndarray] = {"": _as_array(x)}
+    for _ in range(levels):
+        next_packets: dict[str, np.ndarray] = {}
+        for key, current in packets.items():
+            if len(current) % 2:
+                current = np.append(current, current[-1])
+            approx = (current[0::2] + current[1::2]) / np.sqrt(2.0)
+            detail = (current[0::2] - current[1::2]) / np.sqrt(2.0)
+            next_packets[key + "a"] = approx
+            next_packets[key + "d"] = detail
+        packets = next_packets
+    return packets
 
 
 def wavelet_reconstruct(coeffs: list[np.ndarray]) -> np.ndarray:

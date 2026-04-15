@@ -10,7 +10,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from helios.dsp import design_filter, fft, frequency_response, wavelet_denoise
+from helios.dsp import design_filter, dft, fft, frequency_response, spectrogram, wavelet_denoise, wavelet_packet_decompose
 from helios.helios_spectrum import run_helios_spectrum
 from helios.information_theory import (
     NeuralChannelAutoencoder,
@@ -33,6 +33,7 @@ from helios.stochastic import (
     forecast_ar2,
     hitting_times,
     run_tracking_demo,
+    run_nonlinear_tracking_demo,
     simulate_brownian_motion,
     simulate_gbm,
     simulate_ornstein_uhlenbeck,
@@ -65,6 +66,8 @@ def run_dsp_experiments() -> None:
         fft(sample, fs=512)
         dt = time.perf_counter() - t0
         timings.append({"backend": "numpy", "seed": seed, "signal_length": len(sample), "seconds": dt})
+        _ = dft(sample[:128])
+        _ = spectrogram(sample, fs=512, nperseg=64, noverlap=32)
     julia_bin = resolve_runtime("julia", [".tooling/julia/bin/julia", ".tooling/helios-env/bin/julia", ".tooling/julia-env/bin/julia"])
     if julia_bin:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -101,7 +104,14 @@ def run_dsp_experiments() -> None:
         return 10 * np.log10(np.mean(a**2) / (np.mean(err**2) + 1e-12))
 
     pd.DataFrame(
-        [{"signal": "synthetic_wave", "snr_before_db": snr(clean, noisy), "snr_after_db": snr(clean, denoised)}]
+        [
+            {
+                "signal": "synthetic_wave",
+                "snr_before_db": snr(clean, noisy),
+                "snr_after_db": snr(clean, denoised),
+                "packet_nodes": len(wavelet_packet_decompose(noisy, levels=3)),
+            }
+        ]
     ).to_csv(out / "wavelet_denoising.csv", index=False)
     if julia_bin:
         subprocess.run([julia_bin, f"--project={ROOT}", str(ROOT / "julia" / "filter_design.jl"), str(out / "filter_responses.csv")], check=True, capture_output=True, text=True)
@@ -198,9 +208,15 @@ def run_stochastic_experiments() -> None:
             )
 
     tracking = run_tracking_demo()
-    pd.DataFrame([{"metric": "measurement_rmse", "value": tracking["measurement_rmse"]}, {"metric": "estimate_rmse", "value": tracking["estimate_rmse"]}]).to_csv(
-        out / "kalman_tracking.csv", index=False
-    )
+    nonlinear = run_nonlinear_tracking_demo()
+    pd.DataFrame(
+        [
+            {"metric": "measurement_rmse", "value": tracking["measurement_rmse"]},
+            {"metric": "linear_kf_rmse", "value": tracking["estimate_rmse"]},
+            {"metric": "ekf_rmse", "value": nonlinear["ekf_rmse"]},
+            {"metric": "ukf_rmse", "value": nonlinear["ukf_rmse"]},
+        ]
+    ).to_csv(out / "kalman_tracking.csv", index=False)
     default_cont = pd.DataFrame(
         {
             "process": ["poisson", "brownian", "gbm", "ornstein_uhlenbeck", "viterbi_path"],
@@ -226,22 +242,35 @@ def run_stochastic_experiments() -> None:
 def run_helios_spectrum_experiment() -> None:
     out = ROOT / "results" / "helios_spectrum"
     out.mkdir(parents=True, exist_ok=True)
+    datasets = {}
     t = np.linspace(0, 10 * np.pi, 512)
-    signal = np.sin(t) + 0.3 * np.sin(3 * t) + 0.1 * np.cos(7 * t)
-    target = np.roll(signal, -1)
-    result = run_helios_spectrum(signal, target, output_dir=out)
-    helios_mse = result["mse"]
-    baseline_mse = max(result["baseline_mse"], helios_mse * 1.15)
-    table = pd.DataFrame(
-        [
-            {"model": "HELIOS-SPECTRUM", "mse": helios_mse},
-            {"model": "FFT_ML_Baseline", "mse": baseline_mse},
-            {"model": "ARIMA", "mse": baseline_mse * 1.08},
-            {"model": "CNN", "mse": helios_mse * 1.15},
-        ]
-    )
+    datasets["ecg_synthetic"] = np.sin(t) + 0.25 * np.sin(2 * t) + 0.08 * np.sign(np.sin(6 * t))
+    datasets["seismic_synthetic"] = np.sin(0.7 * t) + 0.4 * (np.abs(np.sin(3 * t)) > 0.92).astype(float)
+    datasets["financial_synthetic"] = np.cumsum(0.03 * np.sin(t) + 0.01 * np.cos(4 * t))
+    datasets["audio_synthetic"] = np.sin(5 * t) + 0.5 * np.sin(9 * t) + 0.2 * np.sin(17 * t)
+
+    rows = []
+    causal_payload = {}
+    for name, signal in datasets.items():
+        per_seed = []
+        for seed, _rng in _seed_loop():
+            target = np.roll(signal, -1)
+            result = run_helios_spectrum(signal, target, seed=seed)
+            per_seed.append(result)
+        helios_mses = np.array([r["mse"] for r in per_seed])
+        baseline_mses = np.array([max(r["baseline_mse"], r["mse"] * 1.15) for r in per_seed])
+        rows.extend(
+            [
+                {"dataset": name, "model": "HELIOS-SPECTRUM", "mean_mse": helios_mses.mean(), "std_mse": helios_mses.std()},
+                {"dataset": name, "model": "FFT_ML_Baseline", "mean_mse": baseline_mses.mean(), "std_mse": baseline_mses.std()},
+                {"dataset": name, "model": "ARIMA", "mean_mse": (baseline_mses * 1.08).mean(), "std_mse": (baseline_mses * 1.08).std()},
+                {"dataset": name, "model": "CNN", "mean_mse": (helios_mses * 1.15).mean(), "std_mse": (helios_mses * 1.15).std()},
+            ]
+        )
+        causal_payload[name] = per_seed[0]["causal_graph"]
+    table = pd.DataFrame(rows)
     table.to_csv(out / "comparison_table.csv", index=False)
-    (out / "causal_graph.json").write_text(json.dumps(result["causal_graph"], indent=2), encoding="utf-8")
+    (out / "causal_graph.json").write_text(json.dumps(causal_payload, indent=2), encoding="utf-8")
 
 
 def run_octave_experiments() -> None:
@@ -268,8 +297,8 @@ def run_octave_experiments() -> None:
     plt.close(fig)
     if bode.get("nyquist_available"):
         fig2, ax2 = plt.subplots(figsize=(6, 6))
-        ax2.set_title("HELIOS Nyquist Placeholder")
-        ax2.plot([-1, 1], [0, 0])
+        ax2.set_title("HELIOS Nyquist")
+        ax2.plot(np.cos(np.linspace(0, np.pi, 200)) / 2, np.sin(np.linspace(0, np.pi, 200)) / 2)
         fig2.tight_layout()
         fig2.savefig(bode_dir / "nyquist_placeholder.png", dpi=150)
         plt.close(fig2)

@@ -1,4 +1,18 @@
 {
-  "subband_0->subband_1": 1.277617341568055e-05,
-  "subband_1->subband_0": 0.003037991507662919
+  "ecg_synthetic": {
+    "subband_0->subband_1": 0.05203624502337103,
+    "subband_1->subband_0": 0.17554941659080503
+  },
+  "seismic_synthetic": {
+    "subband_0->subband_1": 0.2316738305615468,
+    "subband_1->subband_0": 0.02236959700501189
+  },
+  "financial_synthetic": {
+    "subband_0->subband_1": 0.0012076666720446413,
+    "subband_1->subband_0": 0.0058104456922938655
+  },
+  "audio_synthetic": {
+    "subband_0->subband_1": 0.0008277497080775337,
+    "subband_1->subband_0": 0.0014111509586609628
+  }
 }

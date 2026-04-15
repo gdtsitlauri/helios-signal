@@ -6,9 +6,12 @@ from pathlib import Path
 import numpy as np
 
 from helios.dsp import (
+    dft,
     design_filter,
     fft,
+    spectrogram,
     wavelet_decompose,
+    wavelet_packet_decompose,
     wavelet_reconstruct,
     zero_phase_filter,
 )
@@ -35,6 +38,7 @@ from helios.stochastic import (
     hitting_times,
     run_arima_bridge,
     run_tracking_demo,
+    run_nonlinear_tracking_demo,
     simulate_gbm,
     simulate_ornstein_uhlenbeck,
     simulate_poisson_process,
@@ -50,6 +54,8 @@ def test_fft_correctness():
     result = fft(x, fs=fs)
     peak = result["freqs"][np.argmax(result["magnitude"])]
     assert abs(peak - 8) < 1e-6
+    manual = dft(x[:16])
+    assert np.argmax(np.abs(manual)) in {1, 15}
 
 
 def test_filter_design():
@@ -70,6 +76,14 @@ def test_wavelet_reconstruction():
     coeffs = wavelet_decompose(x, levels=3)
     recon = wavelet_reconstruct(coeffs)[: len(x)]
     assert np.allclose(x, recon, atol=1e-8)
+    packets = wavelet_packet_decompose(x, levels=2)
+    assert len(packets) == 4
+
+
+def test_spectrogram_shape():
+    x = np.sin(np.linspace(0, 8 * np.pi, 128))
+    spec = spectrogram(x, fs=128, nperseg=32, noverlap=16)
+    assert spec["power"].ndim == 2
 
 
 def test_huffman_coding():
@@ -151,6 +165,12 @@ def test_kalman_convergence():
     assert result["estimate_rmse"] < result["measurement_rmse"]
 
 
+def test_nonlinear_kalman_convergence():
+    result = run_nonlinear_tracking_demo()
+    assert result["ekf_rmse"] < result["measurement_state_rmse"]
+    assert result["ukf_rmse"] < result["measurement_state_rmse"]
+
+
 def test_helios_spectrum_pipeline(tmp_path: Path):
     t = np.linspace(0, 8 * np.pi, 256)
     signal = np.sin(t) + 0.2 * np.sin(4 * t)
@@ -189,3 +209,5 @@ def test_packaged_results_exist():
     assert graph
     assert (root / "results" / "information_theory" / "rate_distortion.csv").exists()
     assert (root / "results" / "stochastic" / "continuous_processes.csv").exists()
+    comp = root / "results" / "helios_spectrum" / "comparison_table.csv"
+    assert "dataset" in comp.read_text().splitlines()[0]

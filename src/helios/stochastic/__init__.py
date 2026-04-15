@@ -14,7 +14,7 @@ from .core import (
     stationary_distribution,
     viterbi_decode,
 )
-from .kalman import KalmanFilter, run_tracking_demo
+from .kalman import ExtendedKalmanFilter, KalmanFilter, UnscentedKalmanFilter, run_nonlinear_tracking_demo, run_tracking_demo
 from .r_bridge import run_arima_bridge
 
 __all__ = [
@@ -33,6 +33,9 @@ __all__ = [
     "simulate_ornstein_uhlenbeck",
     "viterbi_decode",
     "KalmanFilter",
+    "ExtendedKalmanFilter",
+    "UnscentedKalmanFilter",
     "run_tracking_demo",
+    "run_nonlinear_tracking_demo",
     "run_arima_bridge",
 ]
