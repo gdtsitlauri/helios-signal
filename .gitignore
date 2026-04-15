@@ -6,7 +6,35 @@ __pycache__/
 .codex
 .matplotlib/
 cache/
+# Python
 *.pyc
 *.pyo
+*.pyd
 *.swp
 *.swo
+*.egg-info/
+dist/
+build/
+# Julia
+Manifest.toml
+*.jl.cov
+*.jl.*.cov
+.julia*
+# R
+.Rhistory
+.RData
+.Rproj.user/
+# Octave/Matlab
+*.asv
+*.m~
+# VS Code
+.vscode/
+# OS junk
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+# Jupyter
+.ipynb_checkpoints/
+# Results (if not to be tracked)
+# results/

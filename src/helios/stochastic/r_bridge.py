@@ -23,6 +23,7 @@ def run_arima_bridge(series: np.ndarray, horizon: int = 5) -> dict:
                 tmp = Path(tmpdir)
                 input_path = tmp / "series.csv"
                 output_path = tmp / "forecast.csv"
+                import pandas as pd
                 values = np.asarray(series, dtype=float)
                 aux = np.roll(values, 1)
                 pd.DataFrame({"signal": values, "aux": aux}).to_csv(input_path, index=False)

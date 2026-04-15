@@ -20,8 +20,23 @@ function run_benchmark(input_path::String, output_path::String)
     CSV.write(output_path, out)
 end
 
-if length(ARGS) < 2
+if length(ARGS) == 2
+    # If only input/output: run benchmark (legacy)
+    run_benchmark(ARGS[1], ARGS[2])
+elseif length(ARGS) == 3
+    # If input/output/fs: run FFT and export spectrum
+    input_path, output_path, fs_str = ARGS
+    df = CSV.read(input_path, DataFrame)
+    signal = Vector{Float64}(df.signal)
+    fs = parse(Float64, fs_str)
+    n = length(signal)
+    spec = rfft(signal)
+    freqs = [fs * k / n for k in 0:(div(n,2))]
+    mag = abs.(spec)
+    out = DataFrame(freqs=freqs, spectrum=spec, magnitude=mag)
+    CSV.write(output_path, out)
+elseif length(ARGS) == 0
     run_demo()
 else
-    run_benchmark(ARGS[1], ARGS[2])
+    println("Usage: julia fft_analysis.jl <input.csv> <output.csv> [fs]")
 end
