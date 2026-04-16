@@ -1,18 +1,18 @@
 {
-  "ecg_synthetic": {
-    "subband_0->subband_1": 0.05203624502337103,
-    "subband_1->subband_0": 0.17554941659080503
+  "ecg": {
+    "subband_0->subband_1": 0.004175781226302422,
+    "subband_1->subband_0": 0.04925179345415782
   },
-  "seismic_synthetic": {
-    "subband_0->subband_1": 0.2316738305615468,
-    "subband_1->subband_0": 0.02236959700501189
+  "seismic": {
+    "subband_0->subband_1": 0.00039185485527005955,
+    "subband_1->subband_0": 0.0025900069787756
   },
-  "financial_synthetic": {
-    "subband_0->subband_1": 0.0012076666720446413,
-    "subband_1->subband_0": 0.0058104456922938655
+  "financial": {
+    "subband_0->subband_1": 0.010402016628177612,
+    "subband_1->subband_0": 0.0067115791042505635
   },
-  "audio_synthetic": {
-    "subband_0->subband_1": 0.0008277497080775337,
-    "subband_1->subband_0": 0.0014111509586609628
+  "audio": {
+    "subband_0->subband_1": 0.0047924922688829886,
+    "subband_1->subband_0": 8.452915949862567e-05
   }
 }

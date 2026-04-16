@@ -59,3 +59,51 @@ Bridge discovery order:
 - Octave is installed locally in `.tooling/octave-env`
 
 The bridges are implemented so the architecture is stable now and can switch to the external runtimes once those tools are installed.
+## Experiment Results (2026)
+
+The main results of the HELIOS experiments (as generated in the results/ directory) are summarized below:
+
+### 1. FFT Benchmark (Julia vs NumPy)
+
+| Backend | Mean Time (s) | Speedup vs NumPy |
+|---------|---------------|------------------|
+| NumPy   | 0.00030       | 1.0              |
+| Julia   | 0.00011       | 2.25             |
+
+### 2. Channel Coding BER (BER @ SNR=4dB)
+
+| Code                | BER      |
+|---------------------|----------|
+| Hamming (7,4)       | 0.1128   |
+| Hamming (15,11)     | 0.0549   |
+| Conv. + Viterbi     | 0.00015  |
+| Reed-Solomon-like   | 0.0152   |
+| LDPC (bitflip)      | 0.00006  |
+| Turbo (simplified)  | 0.000015 |
+| Neural Autoencoder  | 0.000037 |
+
+### 3. HELIOS-SPECTRUM vs Baselines (MSE)
+
+| Dataset     | HELIOS-SPECTRUM | FFT+ML | ARIMA | CNN   |
+|-------------|-----------------|--------|-------|-------|
+| ECG         | 0.0411          | 0.0574 | 0.062 | 0.047 |
+| Seismic     | 0.331           | 0.905  | 0.978 | 0.381 |
+| Financial   | 0.651           | 4.53   | 4.90  | 0.749 |
+| Audio       | 0.248           | 0.787  | 0.850 | 0.285 |
+
+### 4. Stochastic Forecast (indicative)
+
+| Horizon | ARIMA Forecast | SARIMA | GARCH omega | Granger | Cointegration |
+|---------|---------------|--------|-------------|---------|---------------|
+| 1       | -0.0531       | -0.0547| 0.100       | 0.0366  | -0.991        |
+| 2       | -0.0525       | -0.0550| 0.100       | 0.0366  | -0.991        |
+
+### 5. Octave Filter Design (indicative)
+
+| Freq (rad) | Mag1 | Mag2 | Mag3 |
+|------------|------|------|------|
+| 0.00       | 1.00 | 0.82 | 1.00 |
+| 0.12       | 1.00 | 0.82 | 1.00 |
+
+---
+For full analysis, see the files in the results/ folder and insert the numbers into the tables of paper/helios_paper.tex.

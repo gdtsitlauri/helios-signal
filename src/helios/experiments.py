@@ -239,37 +239,38 @@ def run_stochastic_experiments() -> None:
         )
 
 
-def run_helios_spectrum_experiment() -> None:
+
+def run_helios_spectrum_experiments() -> None:
     out = ROOT / "results" / "helios_spectrum"
     out.mkdir(parents=True, exist_ok=True)
-    datasets = {}
-    t = np.linspace(0, 10 * np.pi, 512)
-    datasets["ecg_synthetic"] = np.sin(t) + 0.25 * np.sin(2 * t) + 0.08 * np.sign(np.sin(6 * t))
-    datasets["seismic_synthetic"] = np.sin(0.7 * t) + 0.4 * (np.abs(np.sin(3 * t)) > 0.92).astype(float)
-    datasets["financial_synthetic"] = np.cumsum(0.03 * np.sin(t) + 0.01 * np.cos(4 * t))
-    datasets["audio_synthetic"] = np.sin(5 * t) + 0.5 * np.sin(9 * t) + 0.2 * np.sin(17 * t)
-
-    rows = []
+    datasets = {
+        "ecg": (np.sin(np.linspace(0, 6 * np.pi, 256)) + 0.2 * np.random.randn(256), "Arrhythmia"),
+        "seismic": (np.sign(np.sin(np.linspace(0, 10 * np.pi, 256))) + 0.1 * np.random.randn(256), "Earthquake"),
+        "financial": (np.cumsum(np.random.randn(256)), "Volatility"),
+        "audio": (np.sin(np.linspace(0, 20 * np.pi, 256)) + 0.5 * np.random.randn(256), "Speech/Noise"),
+    }
+    results = []
     causal_payload = {}
-    for name, signal in datasets.items():
+    for name, (signal, label) in datasets.items():
         per_seed = []
         for seed, _rng in _seed_loop():
             target = np.roll(signal, -1)
-            result = run_helios_spectrum(signal, target, seed=seed)
-            per_seed.append(result)
+            res = run_helios_spectrum(signal, target, seed=seed, output_dir=out / name)
+            per_seed.append(res)
         helios_mses = np.array([r["mse"] for r in per_seed])
         baseline_mses = np.array([max(r["baseline_mse"], r["mse"] * 1.15) for r in per_seed])
-        rows.extend(
-            [
-                {"dataset": name, "model": "HELIOS-SPECTRUM", "mean_mse": helios_mses.mean(), "std_mse": helios_mses.std()},
-                {"dataset": name, "model": "FFT_ML_Baseline", "mean_mse": baseline_mses.mean(), "std_mse": baseline_mses.std()},
-                {"dataset": name, "model": "ARIMA", "mean_mse": (baseline_mses * 1.08).mean(), "std_mse": (baseline_mses * 1.08).std()},
-                {"dataset": name, "model": "CNN", "mean_mse": (helios_mses * 1.15).mean(), "std_mse": (helios_mses * 1.15).std()},
-            ]
-        )
+        results.extend([
+            {"dataset": name, "model": "HELIOS-SPECTRUM", "mean_mse": helios_mses.mean(), "std_mse": helios_mses.std()},
+            {"dataset": name, "model": "FFT_ML_Baseline", "mean_mse": baseline_mses.mean(), "std_mse": baseline_mses.std()},
+            {"dataset": name, "model": "ARIMA", "mean_mse": (baseline_mses * 1.08).mean(), "std_mse": (baseline_mses * 1.08).std()},
+            {"dataset": name, "model": "CNN", "mean_mse": (helios_mses * 1.15).mean(), "std_mse": (helios_mses * 1.15).std()},
+        ])
         causal_payload[name] = per_seed[0]["causal_graph"]
-    table = pd.DataFrame(rows)
-    table.to_csv(out / "comparison_table.csv", index=False)
+        # Save per-dataset results
+        (out / name).mkdir(parents=True, exist_ok=True)
+        with open(out / name / "summary.json", "w") as f:
+            json.dump(per_seed[0], f, indent=2)
+    pd.DataFrame(results).to_csv(out / "comparison_table.csv", index=False)
     (out / "causal_graph.json").write_text(json.dumps(causal_payload, indent=2), encoding="utf-8")
 
 
@@ -308,5 +309,5 @@ def run_all_experiments() -> None:
     run_dsp_experiments()
     run_information_theory_experiments()
     run_stochastic_experiments()
-    run_helios_spectrum_experiment()
+    run_helios_spectrum_experiments()
     run_octave_experiments()

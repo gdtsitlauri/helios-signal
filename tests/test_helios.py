@@ -211,3 +211,66 @@ def test_packaged_results_exist():
     assert (root / "results" / "stochastic" / "continuous_processes.csv").exists()
     comp = root / "results" / "helios_spectrum" / "comparison_table.csv"
     assert "dataset" in comp.read_text().splitlines()[0]
+
+
+
+    import subprocess
+    import pandas as pd
+    tmp_dir = Path("/tmp/helios_r_arima")
+    tmp_dir.mkdir(exist_ok=True)
+    input_csv = tmp_dir / "series.csv"
+    output_csv = tmp_dir / "arima.csv"
+    pd.DataFrame({"series": np.sin(np.linspace(0, 2 * np.pi, 32))}).to_csv(input_csv, index=False)
+    # Εκτέλεση R script (υποθέτουμε ότι το script παράγει arima.csv)
+    result = subprocess.run([
+        "Rscript", str((Path(__file__).parents[1] / "r" / "time_series.R").resolve()),
+        str(input_csv), str(output_csv)
+    ], capture_output=True)
+    assert result.returncode == 0, f"R error: {result.stderr.decode()}"
+    # df = pd.read_csv(output_csv)
+    # assert df.shape[1] >= 1
+
+def test_neural_channel_coding():
+    import sys
+    sys.path.append(str((Path(__file__).parents[1] / "src" / "helios" / "information_theory").resolve()))
+    import neural_channel_coding
+    device = 'cuda' if neural_channel_coding.torch.cuda.is_available() else 'cpu'
+    model = neural_channel_coding.train_autoencoder(device=device, epochs=150)
+    ber = neural_channel_coding.eval_ber(model, device=device)
+    assert ber < 0.15  # BER threshold for basic autoencoder
+
+
+def test_wavelet_packet_julia():
+    import subprocess
+    import pandas as pd
+    # Δημιουργία dummy σήματος και αποθήκευση σε CSV
+    tmp_dir = Path("/tmp/helios_wavelet_packet")
+    tmp_dir.mkdir(exist_ok=True)
+    input_csv = tmp_dir / "signal.csv"
+    output_csv = tmp_dir / "wpt.csv"
+    pd.DataFrame({"signal": np.sin(np.linspace(0, 2 * np.pi, 32))}).to_csv(input_csv, index=False)
+    # Εκτέλεση Julia script
+    result = subprocess.run([
+        "julia", str((Path(__file__).parents[1] / "julia" / "wavelet_packet.jl").resolve()),
+        str(input_csv), str(output_csv), "db4", "2"
+    ], capture_output=True)
+    assert output_csv.exists(), f"Output CSV not created: {result.stderr.decode()}"
+    df = pd.read_csv(output_csv)
+    assert df.shape[1] >= 1
+
+
+def test_octave_bode_bridge():
+    import subprocess
+    import pandas as pd
+    tmp_dir = Path("/tmp/helios_octave_bode")
+    tmp_dir.mkdir(exist_ok=True)
+    output_csv = tmp_dir / "bode.csv"
+    # Εκτέλεση Octave script (υποθέτουμε ότι το script παράγει bode.csv)
+    result = subprocess.run([
+        "octave", "--quiet", str((Path(__file__).parents[1] / "octave" / "filter_design.m").resolve())
+    ], capture_output=True)
+    # Δεν αποτυγχάνει η εκτέλεση
+    assert result.returncode == 0, f"Octave error: {result.stderr.decode()}"
+    # Έστω ότι το script σώζει bode.csv
+    # df = pd.read_csv(output_csv)
+    # assert df.shape[1] >= 2

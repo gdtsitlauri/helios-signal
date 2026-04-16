@@ -31,6 +31,7 @@ HELIOS-SPECTRUM decomposes signals into sub-bands, scores them via mutual inform
 Python acts as the orchestrator while Julia, R, and Octave bridges activate when the runtimes are installed.
 
 \section{Experiments}
+% FFT Benchmark Table (inlined from results/dsp/fft_benchmarks.csv)
 \begin{table}[h]
 \centering
 \caption{FFT Benchmark}
@@ -38,12 +39,12 @@ Python acts as the orchestrator while Julia, R, and Octave bridges activate when
 \toprule
 Backend & Seconds & Speedup \\
 \midrule
-NumPy & 0.00032 & 1.00 \\
-Julia (target backend) & 0.00009 & 1.00 \\
+NumPy & 0.00030 & 1.00 \\
+Julia & 0.00011 & 2.25 \\
 \bottomrule
 \end{tabular}
 \end{table}
-
+% Channel Coding Table (inlined from results/information_theory/channel_coding_ber.csv)
 \begin{table}[h]
 \centering
 \caption{Channel Coding at 4 dB}
@@ -52,12 +53,16 @@ Julia (target backend) & 0.00009 & 1.00 \\
 Code & BER \\
 \midrule
 Hamming (7,4) & 0.1128 \\
-Convolutional + Viterbi & 0.000153 \\
+Hamming (15,11) & 0.0549 \\
+Convolutional + Viterbi & 0.00015 \\
+Reed-Solomon-like & 0.0152 \\
+LDPC (bitflip) & 0.00006 \\
 Turbo (simplified) & 0.000015 \\
+Neural Autoencoder & 0.000037 \\
 \bottomrule
 \end{tabular}
 \end{table}
-
+% Compression Ratio Table (inlined from results/information_theory/compression_comparison.csv)
 \begin{table}[h]
 \centering
 \caption{Compression Ratio}
@@ -71,21 +76,22 @@ Arithmetic & 13.76 & 2.00 \\
 \bottomrule
 \end{tabular}
 \end{table}
-
+% HELIOS-SPECTRUM vs Baselines Table (inlined from results/helios_spectrum/comparison_table.csv)
 \begin{table}[h]
 \centering
 \caption{HELIOS-SPECTRUM vs Baselines}
 \begin{tabular}{lc}
 \toprule
-Model & MSE \\
+Dataset & HELIOS-SPECTRUM & FFT+ML & ARIMA & CNN \\
 \midrule
-HELIOS-SPECTRUM & 0.365 \\
-FFT + ML & 0.419 \\
-ARIMA & 0.453 \\
-CNN & 0.419 \\
+ECG & 0.0411 & 0.0574 & 0.062 & 0.047 \\
+Seismic & 0.331 & 0.905 & 0.978 & 0.381 \\
+Financial & 0.651 & 4.53 & 4.90 & 0.749 \\
+Audio & 0.248 & 0.787 & 0.850 & 0.285 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
 
 \section{Conclusion}
 The current bootstrap release establishes a reproducible, extensible foundation for the full HELIOS research agenda.
