@@ -1,5 +1,10 @@
 # HELIOS
 
+**Author:** George David Tsitlauri  
+**Affiliation:** Dept. of Informatics & Telecommunications, University of Thessaly, Greece  
+**Contact:** gdtsitlauri@gmail.com  
+**Year:** 2026
+
 HELIOS is a multi-language research framework for signal processing, information theory, stochastic systems, and hybrid predictive modeling.
 
 This bootstrap implementation provides:
@@ -107,3 +112,15 @@ The main results of the HELIOS experiments (as generated in the results/ directo
 
 ---
 For full analysis, see the files in the results/ folder and insert the numbers into the tables of paper/helios_paper.tex.
+
+## Citation
+
+```bibtex
+@misc{tsitlauri2026helios,
+  author = {George David Tsitlauri},
+  title  = {HELIOS: A Multi-Language Framework for Unified Signal Processing, Information Theory, and Stochastic Systems},
+  year   = {2026},
+  institution = {University of Thessaly},
+  email  = {gdtsitlauri@gmail.com}
+}
+```
