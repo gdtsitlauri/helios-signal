@@ -13,7 +13,11 @@ gdtsitlauri@gmail.com}
 \maketitle
 
 \begin{abstract}
-HELIOS is an open-source framework that unifies classical digital signal processing, information theory, stochastic systems, and neural temporal prediction under a single research workflow. The proposed HELIOS-SPECTRUM pipeline combines wavelet decomposition, stochastic regime characterization, information-theoretic feature selection, and temporal convolutional prediction in a single causal analysis stack.
+HELIOS is an open-source framework that unifies classical digital signal processing, information theory, stochastic systems, and neural temporal prediction under a single research workflow. The proposed HELIOS-SPECTRUM pipeline combines wavelet decomposition, stochastic regime characterization, information-theoretic feature selection, and temporal convolutional prediction in a single causal analysis stack. The strongest empirical evidence in the current release is concentrated in the
+HELIOS-SPECTRUM benchmark suite, where the proposed pipeline outperforms the
+committed FFT+ML, ARIMA, and CNN baselines across ECG, seismic, financial, and
+audio datasets, while the surrounding DSP, coding, and stochastic modules serve
+as supporting components of the broader signal-research platform.
 \end{abstract}
 
 \section{Introduction}
@@ -96,8 +100,21 @@ Audio & 0.248 & 0.787 & 0.850 & 0.285 \\
 \end{tabular}
 \end{table}
 
+\subsection{Interpretation Boundary}
+The current HELIOS release should be read as a unified signal-research platform
+with one especially clear empirical center: HELIOS-SPECTRUM. The FFT, channel
+coding, compression, and stochastic modules provide meaningful supporting
+artifacts and demonstrate breadth, but they are not all intended to carry equal
+weight as standalone benchmark papers. The most defensible flagship claim in
+the present repository is that HELIOS-SPECTRUM provides a reproducible,
+multi-language signal-analysis pipeline with strong comparative results on the
+committed benchmark families.
+
 
 \section{Conclusion}
-The current bootstrap release establishes a reproducible, extensible foundation for the full HELIOS research agenda.
+The current release establishes a reproducible, extensible foundation for the
+full HELIOS research agenda while already providing a strong empirical core in
+HELIOS-SPECTRUM and a credible set of supporting DSP, coding, and stochastic
+artifacts around that center.
 
 \end{document}
